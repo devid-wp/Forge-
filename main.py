@@ -38,9 +38,8 @@ from ui.display import (
 from utils.ignore import IgnoreRules
 
 app = typer.Typer(
-    name="devanalyze",
+    name="forge",
     help="Forge - CLI dev project analyzer.",
-    no_args_is_help=True,
 )
 
 KNOWN_COMMANDS = {"analyze", "stats", "tree", "git", "health"}
@@ -240,9 +239,13 @@ def health(
 
 
 def main() -> None:
-    """CLI entry point with command routing."""
+    """CLI entry point with command routing.
+
+    `forge` and `forge /path/to/project` run a full analysis directly,
+    while named subcommands (stats, tree, git, health) stay available.
+    """
     raw = sys.argv[1:]
-    if raw and raw[0] not in KNOWN_COMMANDS:
+    if not raw or raw[0] not in KNOWN_COMMANDS:
         sys.argv = [sys.argv[0], "analyze", *raw]
     app()
 

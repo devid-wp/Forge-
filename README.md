@@ -26,26 +26,26 @@ python -m venv .venv
 ## Usage
 
 ```bash
-devanalyze .                 # full analysis of the current directory
-devanalyze /path/to/project  # full analysis of a specific path
-devanalyze . -                                      # interactive mode (coming soon)
+forge .                 # full analysis of the current directory
+forge /path/to/project  # full analysis of a specific path
+forge                   # same as `forge .`
 
-devanalyze stats             # languages and file statistics
-devanalyze tree              # file tree
-devanalyze git               # git analysis
-devanalyze health            # project health score
+forge stats             # languages and file statistics
+forge tree              # file tree
+forge git               # git analysis
+forge health            # project health score
 ```
 
 ### Options
 
 ```bash
-devanalyze analyze . --no-tree              # skip the file tree
-devanalyze analyze . --no-git               # skip git analysis
-devanalyze analyze . --depth 2              # limit tree depth
-devanalyze analyze . --top-files 20         # show 20 largest files
-devanalyze analyze . --dir-sizes            # show directory size breakdown
-devanalyze analyze . --json                 # machine-readable JSON output
-devanalyze stats --no-types                 # hide text/binary summary
+forge analyze . --no-tree              # skip the file tree
+forge analyze . --no-git               # skip git analysis
+forge analyze . --depth 2              # limit tree depth
+forge analyze . --top-files 20         # show 20 largest files
+forge analyze . --dir-sizes            # show directory size breakdown
+forge analyze . --json                 # machine-readable JSON output
+forge stats --no-types                 # hide text/binary summary
 ```
 
 ### .forgeignore
