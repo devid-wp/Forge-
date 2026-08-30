@@ -19,6 +19,13 @@ Forge is a CLI tool that analyzes the structure of a software project and shows 
 ## Installation
 
 ```bash
+./install.sh          # creates .venv and installs everything
+./install.sh --global # also puts `forge` on PATH (~/.local/bin)
+```
+
+Manual alternative:
+
+```bash
 python -m venv .venv
 .venv/bin/pip install -e .
 ```
@@ -68,6 +75,7 @@ Built-in ignores (node_modules, .git, venv, dist, etc.) always apply.
 ```
 Forge/
 ├── main.py            # CLI entry point
+├── install.sh         # one-command installer
 ├── analyzers/         # files, languages, git, health, technologies
 ├── ui/                # Rich-based display
 └── utils/             # ignore rules
