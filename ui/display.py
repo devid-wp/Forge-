@@ -177,7 +177,7 @@ def show_health(report: HealthReport) -> None:
 def show_summary(
     info: ProjectInfo,
     lang_stats: LanguageStats,
-    git_info: GitInfo,
+    git_info: GitInfo | None,
     health: HealthReport,
     techs: list[TechInfo],
 ) -> None:
@@ -192,7 +192,9 @@ def show_summary(
         f"Health: [bold]{health.score}/100[/] ({health.passed_count}/{len(health.checks)} checks)",
     ]
 
-    if git_info.is_repo:
+    if git_info is None:
+        parts.append("[dim]Git skipped[/]")
+    elif git_info.is_repo:
         parts.append(f"Git: [cyan]{git_info.branch}[/] ({git_info.total_commits} commits)")
     else:
         parts.append("[dim]No git[/]")

@@ -135,7 +135,7 @@ def dir_size_breakdown(files: list[Path], root: Path) -> list[tuple[str, int]]:
     dirs: dict[str, int] = {}
     for f in files:
         parts = f.parts
-        top = parts[0] if len(parts) > 1 else "."
+        top = parts[0] if len(parts) > 1 else "(root)"
         full = root / f
         try:
             dirs[top] = dirs.get(top, 0) + full.stat().st_size

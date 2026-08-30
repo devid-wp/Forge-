@@ -37,12 +37,27 @@ from ui.display import (
 )
 from utils.ignore import IgnoreRules
 
+VERSION = "1.0.0"
+
 app = typer.Typer(
     name="forge",
     help="Forge - CLI dev project analyzer.",
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 
 KNOWN_COMMANDS = {"analyze", "stats", "tree", "git", "health"}
+TOP_LEVEL_FLAGS = {"--help", "-h", "--version", "-V", "--install-completion", "--show-completion"}
+
+
+@app.callback()
+def _main_callback(
+    version: bool = typer.Option(False, "--version", "-V", help="Show the version."),
+) -> None:
+    """Forge entry point."""
+    if version:
+        console.print(f"Forge {VERSION}")
+        raise typer.Exit()
 
 
 def _resolve_path(path_str: str) -> Path:
@@ -123,7 +138,7 @@ def analyze(
         tree_lines = build_tree(root, max_depth=depth, rules=rules)
         show_tree(tree_lines, project_info.name)
 
-    show_summary(project_info, lang_stats, git_info or analyze_git(root), health, techs)
+    show_summary(project_info, lang_stats, git_info, health, techs)
 
 
 def _analyze_json(root: Path, depth: int, no_git: bool, top_files: int, dir_sizes: bool) -> None:
@@ -245,8 +260,12 @@ def main() -> None:
     while named subcommands (stats, tree, git, health) stay available.
     """
     raw = sys.argv[1:]
-    if not raw or raw[0] not in KNOWN_COMMANDS:
+
+    if not raw:
+        sys.argv = [sys.argv[0], "analyze"]
+    elif raw[0] not in KNOWN_COMMANDS and raw[0] not in TOP_LEVEL_FLAGS:
         sys.argv = [sys.argv[0], "analyze", *raw]
+
     app()
 
 
