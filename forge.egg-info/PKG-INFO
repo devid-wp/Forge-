@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: forge
+Version: 0.1.0
+Summary: Forge - CLI dev project analyzer
+Requires-Python: >=3.10
+Requires-Dist: typer>=0.9.0
+Requires-Dist: rich>=13.0
