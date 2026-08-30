@@ -4,8 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forge"
-version = "0.1.0"
-description = "Forge - CLI dev project analyzer"
+version = "1.0.0"
+description = "Forge - CLI dev project analyzer. Instant project structure, languages, and health analysis without AI."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Forge Team" }]
+keywords = ["cli", "analysis", "project", "statistics", "developer-tools"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+]
 requires-python = ">=3.10"
 dependencies = [
     "typer>=0.9.0",
