@@ -8,23 +8,34 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from analyzers.files import build_tree, scan_project
+from analyzers.files import (
+    build_tree,
+    dir_size_breakdown,
+    file_type_summary,
+    find_largest_files,
+    scan_project,
+)
 from analyzers.git import analyze_git
 from analyzers.health import analyze_health
 from analyzers.languages import analyze_languages
 from analyzers.technologies import detect_technologies
 from ui.display import (
+    build_json_output,
     console,
+    show_dir_sizes,
+    show_file_types,
     show_git,
     show_header,
     show_health,
     show_languages,
+    show_largest_files,
     show_project_info,
     show_progress,
     show_summary,
     show_technologies,
     show_tree,
 )
+from utils.ignore import IgnoreRules
 
 app = typer.Typer(
     name="devanalyze",
@@ -53,15 +64,25 @@ def analyze(
     depth: int = typer.Option(4, "--depth", "-d", help="Maximum tree depth"),
     no_tree: bool = typer.Option(False, "--no-tree", help="Skip the file tree"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip the git analysis"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    top_files: int = typer.Option(
+        10, "--top-files", "-f", help="Number of largest files to show (0 to skip)"
+    ),
+    dir_sizes: bool = typer.Option(False, "--dir-sizes", help="Show directory sizes"),
 ) -> None:
     """Run a full project analysis."""
     root = _resolve_path(path)
+    rules = IgnoreRules(root)
+
+    if json_output:
+        _analyze_json(root, depth, no_git, top_files, dir_sizes)
+        return
 
     show_header(root)
 
     with show_progress("Analysis") as progress:
         task = progress.add_task("Scanning files...", total=None)
-        project_info = scan_project(root)
+        project_info = scan_project(root, rules)
         progress.update(task, description="Analyzing languages...")
         lang_stats = analyze_languages(project_info.files)
         progress.update(task, description="Detecting technologies...")
@@ -73,6 +94,9 @@ def analyze(
         if not no_git:
             progress.update(task, description="Analyzing git...")
             git_info = analyze_git(root)
+
+        largest = find_largest_files(project_info.files, root, top_files) if top_files else []
+        dir_sizes_list = dir_size_breakdown(project_info.files, root) if dir_sizes else []
         progress.update(task, description="Done!", completed=1)
 
     console.print()
@@ -81,6 +105,14 @@ def analyze(
     show_languages(lang_stats)
     console.print()
     show_technologies(techs)
+
+    if largest:
+        console.print()
+        show_largest_files(largest)
+    if dir_sizes_list:
+        console.print()
+        show_dir_sizes(dir_sizes_list)
+
     console.print()
     if git_info:
         show_git(git_info)
@@ -89,30 +121,77 @@ def analyze(
 
     if not no_tree:
         console.print()
-        tree_lines = build_tree(root, max_depth=depth)
+        tree_lines = build_tree(root, max_depth=depth, rules=rules)
         show_tree(tree_lines, project_info.name)
 
     show_summary(project_info, lang_stats, git_info or analyze_git(root), health, techs)
 
 
-@app.command()
-def stats(
-    path: str = typer.Argument(".", help="Path to the project"),
-) -> None:
-    """Show language and file statistics."""
+def _analyze_json(root: Path, depth: int, no_git: bool, top_files: int, dir_sizes: bool) -> None:
+    """Collect full analysis and print as JSON."""
+    rules = IgnoreRules(root)
+    project_info = scan_project(root, rules)
+    lang_stats = analyze_languages(project_info.files)
+    techs = detect_technologies(project_info.files)
+    health = analyze_health(root, project_info.files)
+
+    git_info = None if no_git else analyze_git(root)
+
+    largest = find_largest_files(project_info.files, root, top_files) if top_files else []
+    dir_sizes_list = dir_size_breakdown(project_info.files, root) if dir_sizes else []
+    type_summary = file_type_summary(project_info.files, root)
+
+    output = build_json_output(
+        project_info, lang_stats, techs, git_info, health, largest, dir_sizes_list,
+        type_summary,
+    )
+    console.print(output)
+
+
+def _analyze_stats(path: str, json_output: bool, top_files: int, show_types: bool = True) -> None:
+    """Shared implementation for stats output."""
     root = _resolve_path(path)
+    rules = IgnoreRules(root)
+
+    if json_output:
+        _analyze_json(root, depth=4, no_git=True, top_files=top_files, dir_sizes=False)
+        return
+
     show_header(root)
 
     with show_progress("Statistics") as progress:
         task = progress.add_task("Scanning...", total=None)
-        project_info = scan_project(root)
+        project_info = scan_project(root, rules)
         lang_stats = analyze_languages(project_info.files)
+        largest = find_largest_files(project_info.files, root, top_files) if top_files else []
+        type_summary = file_type_summary(project_info.files, root) if show_types else {}
         progress.update(task, description="Done!", completed=1)
 
     console.print()
     show_project_info(project_info)
     console.print()
     show_languages(lang_stats)
+
+    if type_summary:
+        console.print()
+        show_file_types(type_summary)
+
+    if largest:
+        console.print()
+        show_largest_files(largest)
+
+
+@app.command()
+def stats(
+    path: str = typer.Argument(".", help="Path to the project"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    top_files: int = typer.Option(
+        10, "--top-files", "-f", help="Number of largest files to show (0 to skip)"
+    ),
+    show_types: bool = typer.Option(True, "--types/--no-types", help="Show text vs binary summary"),
+) -> None:
+    """Show language and file statistics."""
+    _analyze_stats(path, json_output, top_files, show_types)
 
 
 @app.command()
@@ -122,8 +201,9 @@ def tree(
 ) -> None:
     """Show the project file tree."""
     root = _resolve_path(path)
+    rules = IgnoreRules(root)
 
-    tree_lines = build_tree(root, max_depth=depth)
+    tree_lines = build_tree(root, max_depth=depth, rules=rules)
     show_tree(tree_lines, root.name)
 
 
@@ -146,11 +226,12 @@ def health(
 ) -> None:
     """Evaluate project health."""
     root = _resolve_path(path)
+    rules = IgnoreRules(root)
     show_header(root)
 
     with show_progress("Health") as progress:
         task = progress.add_task("Analyzing...", total=None)
-        project_info = scan_project(root)
+        project_info = scan_project(root, rules)
         report = analyze_health(root, project_info.files)
         progress.update(task, description="Done!", completed=1)
 
